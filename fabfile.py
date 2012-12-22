@@ -129,7 +129,7 @@ def reload_app(arg=None):
 
     if arg <> "quick":
         with cd(env.project_dir):
-            _ve_run(env.project, "easy_install -i http://downloads.egenix.com/python/index/ucs4/ egenix-mx-base")
+            _ve_run(env.project, "pip install egenix-mx-base")
             _ve_run(env.project, "pip install -r requirements.pip")
             _ve_run(env.project, "pip install -e ./")
             _ve_run(env.project, "manage.py syncdb")
