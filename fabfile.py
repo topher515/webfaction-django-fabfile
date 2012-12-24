@@ -120,14 +120,13 @@ def install_supervisor():
             run('./start_supervisor.sh stop && ./start_supervisor.sh start')
 
 
-
 def reload_app(arg=None):
     """Pulls app and refreshes requirements"""
 
     with cd(env.project_dir):
         run('git pull')
 
-    if arg <> "quick":
+    if arg != "quick":
         with cd(env.project_dir):
             _ve_run(env.project, "pip install egenix-mx-base")
             _ve_run(env.project, "pip install -r requirements.pip")
@@ -142,8 +141,15 @@ def restart_app():
     """Restarts the app using supervisorctl"""
 
     with cd(env.supervisor_dir):
-        _ve_run('supervisor','supervisorctl reread && supervisorctl reload')
+        # _ve_run('supervisor','supervisorctl reread && supervisorctl reload')
+        _ve_run('supervisor','supervisorctl update')
         _ve_run('supervisor','supervisorctl restart %s' % env.project)
+
+
+def supervisor(cmd):
+    with cd(env.supervisor_dir):
+        _ve_run('supervisor','supervisorctl %s' % cmd)
+
 
 ### Helper functions
 
