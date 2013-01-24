@@ -72,6 +72,8 @@ def install_app():
     reload_app()
     restart_app()
 
+
+
 def install_supervisor():
     """Installs supervisor in its wf app and own virtualenv
     """
@@ -120,6 +122,23 @@ def install_supervisor():
             run('./start_supervisor.sh stop && ./start_supervisor.sh start')
 
 
+def migrate():
+    need_migrate = False
+    mig_resp = _ve_run(env.project, "manage.py migrate --list")
+    for line in mig_resp.split("\n"):
+        if line.startswith("  ( )"):
+            need_migrate = True
+            break
+    if need_migrate:
+        resp = prompt("Found unmigrated migrations. Shall I try to run these [y/N]? ")
+        if resp.lower().startswith("y"):
+            _ve_run(env.project, "manage.py migrate")
+        else:
+            abort("Unable to continue deploy with unfinished migrations...")
+
+def collect_static():
+    _ve_run(env.project, "manage.py collectstatic --noinput")
+
 def reload_app(arg=None):
     """Pulls app and refreshes requirements"""
 
@@ -132,7 +151,9 @@ def reload_app(arg=None):
             _ve_run(env.project, "pip install -r requirements.pip")
             _ve_run(env.project, "pip install -e ./")
             _ve_run(env.project, "manage.py syncdb")
-            _ve_run(env.project, "manage.py collectstatic")
+            execute(migrate)
+            execute(collect_static)
+            
 
     restart_app()
 
@@ -143,12 +164,17 @@ def restart_app():
     with cd(env.supervisor_dir):
         # _ve_run('supervisor','supervisorctl reread && supervisorctl reload')
         _ve_run('supervisor','supervisorctl update')
-        _ve_run('supervisor','supervisorctl restart %s' % env.project)
+        _ve_run('supervisor','supervisorctl restart all')
 
 
 def supervisor(cmd):
     with cd(env.supervisor_dir):
         _ve_run('supervisor','supervisorctl %s' % cmd)
+
+
+#def tail_app(log_type="error"):
+#    run("tail -f %s/logs/user/%s_%s.log" % (env.home, log_type, PROJECT_NAME),
+#                                                    type=)
 
 
 ### Helper functions
@@ -162,10 +188,11 @@ def _create_ve(name):
     else:
         print "Virtualenv with name %s already exists. Skipping." % name
 
-def _ve_run(ve,cmd):
+def _ve_run(ve,cmd,*args,**kwargs):
     """virtualenv wrapper for fabric commands
     """
-    run("""source %s/%s/bin/activate && %s""" % (env.virtualenv_dir, ve, cmd))
+    return run("""source %s/%s/bin/activate && %s""" % 
+                        (env.virtualenv_dir, ve, cmd), *args, **kwargs)
 
 def _webfaction_create_app(app):
     """creates a "custom app with port" app on webfaction using the webfaction public API.
